@@ -237,5 +237,90 @@ function Otk.createStack()
 end
 
 
+function Otk.clone(object)
+    local lookup_table = {}
+    local function _copy(object)
+        if type(object) ~= "table" then
+            return object
+        elseif lookup_table[object] then
+            return lookup_table[object]
+        end
+        local new_table = {}
+        lookup_table[object] = new_table
+        for key, value in pairs(object) do
+            new_table[_copy(key)] = _copy(value)
+        end
+        return setmetatable(new_table, getmetatable(object))
+    end
+    return _copy(object)
+end
+
+--[[
+    可以截取包含中文的字符串 
+    start 开始位置 
+    len 要截取的长度
+]]
+function Otk.subStr(str,start,len)
+    if Otk.isNullStr(str) then
+        return ""
+    end
+    if not start or start == 0 then
+        start = 1
+    end
+    -- local lengthUTF_8 = #(string.gsub(str, "[\128-\191]", ""))
+    local lengthUTF_8 = string.utf8len(str)
+    if lengthUTF_8 <= len then
+        return str
+    end
+
+    if start > 1 then
+        str = Otk.subStr(str,1,start)
+        return Otk.subStr(str,1,len)
+    end
+
+    local matchStr = "^"
+    for var=1, len do
+        matchStr = matchStr..".[\128-\191]*"
+    end
+    local str = string.match(str, matchStr)
+    return str
+end
+
+
+--[[
+    过滤联系方式中的无效字符
+]]
+function Otk.filterInputContactInfo(input)
+    local isOnlyNumber = (tonumber(input) ~= nil)
+    if isOnlyNumber then
+        input = string.sub(input,1,11)
+    else        
+        local inputPattern = "[^%w.%_%-%@]+"
+        input = string.gsub(input,inputPattern,"")
+    end
+    --Otk.log("过滤中文后="..input)
+    return input
+end
+
+--[[
+    检测输入的联系方式是否正确(手机号码 or 邮箱)
+]]
+function Otk.checkInputContactInfo(input)
+    local isOnlyNumber = (tonumber(input) ~= nil)
+    if isOnlyNumber then
+        if string.len(input) < 11 then
+            return false
+        end
+        return true
+    end
+
+    local resultPattern = "^[%w._-]+@[0-9a-zA-Z]+.com$"
+    local result = string.match(input,resultPattern)
+    if result then
+        return true
+    end
+    Otk.log("输入错误，不是正确邮箱格式--"..input)
+    return false
+end
 
 
